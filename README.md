@@ -520,7 +520,7 @@ predictions.plot.scatter(x='Predicted', y='Actual', title='Out of Sample R2 on c
 
 ### |error| as a function of price
 
-I'm surprised to see there doesn't seem to be a significant slope here, thus the error actually does not seem to be related to the price. 
+I'm surprised to see there doesn't seem to be a significant slope here. The error actually does not seem to be related to the price. 
 
 
 ```python
@@ -539,7 +539,7 @@ sns.lmplot(data=error_data, x='Price', y='|error|', size=10, aspect=1.2)
 ![png](README_files/README_41_1.png)
 
 
-Just to double check, we'll take a look at the absolute % errors as a function of the price. Again it seems to be the case that the relative error is much higher on low prices homes, consistent with a $standard error that is unaffected by price.
+Just to double check, we'll take a look at the absolute % errors as a function of the price. Again it seems to be the case that the relative error is much higher on low priced homes, consistent with a $standard error that is unaffected by price.
 
 
 ```python
