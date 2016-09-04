@@ -437,11 +437,11 @@ def fit_model(X, y):
     cv_sets = ShuffleSplit(X.shape[0], n_iter=10, test_size=0.20, random_state=28)
 
     # Create a Gradient Boosted regressor object
-    regressor = GBRegressor(min_child_weight=10)
+    regressor = GBRegressor()
 
     # Create a dictionary of parameter distributions to try
     params = {'max_depth': range(3, 7),
-              #'learning_rate': LogspaceSampler(0.01, 1.0, seed=29385),
+              'learning_rate': LogspaceSampler(0.01, 1.0, seed=29385),
               'gamma': LogspaceSampler(0.000001, 1.0, seed=46435),
               'reg_lambda': LogspaceSampler(0.000001, 1.0, seed=92385)}
 
@@ -450,7 +450,7 @@ def fit_model(X, y):
 
     # Create the grid search object
     grid = RandomizedSearchCV(regressor, param_distributions=params, 
-                              scoring=scoring_fnc, cv=cv_sets, n_iter=30)
+                              scoring=scoring_fnc, cv=cv_sets, n_iter=20)
 
     # Fit the grid search object to the data to compute the optimal model
     grid = grid.fit(X, y)
@@ -471,22 +471,22 @@ print "Parameter 'max_depth' is {} for the optimal model.".format(reg.get_params
 print reg
 ```
 
-    Parameter 'max_depth' is 3 for the optimal model.
+    Parameter 'max_depth' is 6 for the optimal model.
     XGBRegressor(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
-           gamma=0.23110486224081037, learning_rate=0.1, max_delta_step=0,
-           max_depth=3, min_child_weight=10, missing=None, n_estimators=100,
-           nthread=-1, objective='reg:linear', reg_alpha=0,
-           reg_lambda=9.8722386298264814e-05, scale_pos_weight=1, seed=8329,
+           gamma=1.5799748209284506e-06, learning_rate=0.055708473976272765,
+           max_delta_step=0, max_depth=6, min_child_weight=1, missing=None,
+           n_estimators=100, nthread=-1, objective='reg:linear', reg_alpha=0,
+           reg_lambda=0.35799978506609781, scale_pos_weight=1, seed=8329,
            silent=True, subsample=1)
 
 
-The RandomizedSearchCV picked the same model we picked, with a maximum depth of 5. This is the model that maximized the validation score.
+The RandomizedSearchCV picked the same model we picked, with a maximum depth of 6. This is the model that maximized the validation score.
 
 ### Predicting Selling Prices
 
 Finally!
 
-It does a bit worse than I'd hoped (R2 of .8). If I was to use this model for clients, I'd need some measure of the prediction error. Obviously, I can calculate this on the out of sample predictions. However, something worth noting is that it's likely that the standard deviation of home prices increases with the home price itself. Personally, I'd expect standard deviation to be a % of the price, similiar to that observed in stock prices (Hull, 1997). We'll check this next...
+It does a bit worse than I'd hoped (R2 of .82). If I was to use this model for clients, I'd need some measure of the prediction error. Obviously, I can calculate this on the out of sample predictions. However, something worth noting is that it's likely that the standard deviation of home prices increases with the home price itself. Personally, I'd expect standard deviation to be a % of the price, similiar to that observed in stock prices (Hull, 1997). We'll check this next...
 
 
 ```python
@@ -510,7 +510,7 @@ predictions.plot.scatter(x='Predicted', y='Actual', title='Out of Sample R2 on c
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x7ff44c3519d0>
+    <matplotlib.axes._subplots.AxesSubplot at 0x7ff445f8fd10>
 
 
 
@@ -520,7 +520,7 @@ predictions.plot.scatter(x='Predicted', y='Actual', title='Out of Sample R2 on c
 
 ### |error| as a function of price
 
-There are few outliers here, but overall it seems to be the case that the errors do infact increase in magnitude with the price of the house. While the slope shown is not statistically significant, it likely would become significant with the exclusion of those two outliers in the upper left. Next, we'll test if the error as a % of the price is indeed constant.
+I'm surprised to see there doesn't seem to be a significant slope here, thus the error actually does not seem to be related to the price. 
 
 
 ```python
@@ -531,7 +531,7 @@ sns.lmplot(data=error_data, x='Price', y='|error|', size=10, aspect=1.2)
 
 
 
-    <seaborn.axisgrid.FacetGrid at 0x7ff44c0c68d0>
+    <seaborn.axisgrid.FacetGrid at 0x7ff445d0cdd0>
 
 
 
@@ -539,7 +539,7 @@ sns.lmplot(data=error_data, x='Price', y='|error|', size=10, aspect=1.2)
 ![png](README_files/README_41_1.png)
 
 
-Again, we're seeing those outliers in the upper left, which cause us to reject the zero slope. However, with the exclusion of those points, the magnitude of %error seems to be effectively constant with the price of the home. I think it makes sense to use the standard deviation of the error as a % of the actual price. 
+Just to double check, we'll take a look at the absolute % errors as a function of the price. Again it seems to be the case that the relative error is much higher on low prices homes, consistent with a $standard error that is unaffected by price.
 
 
 ```python
@@ -550,7 +550,7 @@ sns.lmplot(data=error_data, x='Price', y='|%error|', size=10, aspect=1.2)
 
 
 
-    <seaborn.axisgrid.FacetGrid at 0x7ff44c0408d0>
+    <seaborn.axisgrid.FacetGrid at 0x7ff445af0f90>
 
 
 
@@ -558,26 +558,27 @@ sns.lmplot(data=error_data, x='Price', y='|%error|', size=10, aspect=1.2)
 ![png](README_files/README_43_1.png)
 
 
-# Error as a % of price
+# Visualizing the error distribution
 
-Despite what seems like a high R2, the model comes a bit short. Assuming errors are approximately normally distributed (which seems fair based on on the plot below), the target value falls between +-40% of what we estimate. That's not a tight error. I wouldn't be satisfied with a realtor that gave me an estimate that could be off by 40%.
+Despite only achieving an R2 of around 0.82 out of sample, the standard error is fairly low, and while the error distribution seems to be non-normal at the tails (excess kurtosis and skew), 90% of the time, we were within $4100 of the price. That's not too bad assuming you're living on the upper quantile. I'd be OK with a realtor that starts out with a price within 20% of the actual selling price, 90% of the time. However, the model won't be very helpful for the lower priced homes. 
+
+Intuitively, this could be explained by the fact that low priced neighborhoods may be low priced for reasons other than the usual suspects (used as factors here). The same applies to higher priced neighborhoods, but since they are higher priced, potentially the error is less of an issue.
 
 
 ```python
-relative_errors = (errors / predictions.Actual)
-error_std_dev = (errors / predictions.Actual).std()
-
-print("Error standard deviation: %.2f%%" % (error_std_dev * 100))
-relative_errors.plot.kde(title='Estimated kernel density of the error')
+print("Error 5%% quantile: $%.2f" % (errors.quantile(.05)))
+print("Error 95%% quantile: $%.2f" % (errors.quantile(.95)))
+errors.plot.kde(title='Estimated kernel density of the error')
 ```
 
-    Error standard deviation: 19.24%
+    Error 5% quantile: $-3484.98
+    Error 95% quantile: $4076.90
 
 
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x7ff4463ac950>
+    <matplotlib.axes._subplots.AxesSubplot at 0x7ff44f47f350>
 
 
 
@@ -585,10 +586,38 @@ relative_errors.plot.kde(title='Estimated kernel density of the error')
 ![png](README_files/README_45_2.png)
 
 
+# What's driving our model?
+
+For the most part, I've really relied (perhaps too much) on the data to determine our model. I didn't remove any factors. I also didn't do any kinds of factor decompositions or scaling. In terms of scaling, Tree models are effectively invariant so this is ok. Also, while more factors increases the combinations tree models can search, I'm applying some L2 regularization on the model that discourages the model from becoming too complex. 
+
+Still, it likely would have been fruitful to do a bit more introspection on the factors before fitting the model, but alas it's too late. We've seen the test set. 
+
+Instead, let's take a look at what factors our model determined to be most important.
+
+
+```python
+feature_importances = pd.Series(reg.booster().get_fscore())
+feature_importances = feature_importances / feature_importances.sum()
+feature_importances.sort_values().plot.bar(colormap='Paired', title='Feature importances')
+```
+
+
+
+
+    <matplotlib.axes._subplots.AxesSubplot at 0x7ff44f374b10>
+
+
+
+
+![png](README_files/README_47_1.png)
+
+
+Unsurprisingly, crime is one of the biggest factors in the price of a home, followed by the number of rooms, and age. The Charles River dummy variable likely only explained only very tiny proportion the samples. The proportion of residential zoning `ZN` and radius to major transportation `RAD` were fairly unimportant. I was fairly surprised that `PTRATIO` (teacher to student ratio) wasn't a bigger factor. Education seems to be a huge factor in the NYC region, but perhaps `PTRATIO` is not a great proxy or preference have changed over time.
+
 ### Applicability
 
 Overall, I would not suggest using a model fit on data from 1978 to predict prices 40 years later due to relative changes in preferences. For example, fewer people in the current generation are deciding to get married and have kids, likely reducing the preference for more rooms and low student teacher ratios. 
 
-The data obviously provides useful factors to predict housing prices, but it may not be sufficient to describe the price of a home. For example, we don't know anything about how well the house has been taken care of, the amenities nearby, the distance to common workplaces. Most importantly, we don't know the value of other houses in the same neighborhood (comps), which is probably the #1 factor used by realtors. A more current model would almost surely have more breadth in terms of factors, as well as more data (think Zillow).
-
 Further, the Boston market is very different from the Lincoln, NE market for example. People in these two markets have different careers, lifestyles, values, and preferences, and this is the case for most cities. Each is potentially unique.
+
+Today, we have much more data available related to the types of surrounding businesses, transportation, employment centers as well as peoples reactions and reviews to those places. I think the factors used serve as a good starting point for residential prices, but I think a more modern model would likely do much better. I'd love to know Zillow's standard error on selling prices.
