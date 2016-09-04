@@ -612,7 +612,7 @@ feature_importances.sort_values().plot.bar(colormap='Paired', title='Feature imp
 ![png](README_files/README_47_1.png)
 
 
-Unsurprisingly, crime is one of the biggest factors in the price of a home, followed by the number of rooms, and age. The Charles River dummy variable likely only explained only very tiny proportion the samples. The proportion of residential zoning `ZN` and radius to major transportation `RAD` were fairly unimportant. I was fairly surprised that `PTRATIO` (teacher to student ratio) wasn't a bigger factor. Education seems to be a huge factor in the NYC region, but perhaps `PTRATIO` is not a great proxy or preference have changed over time.
+Unsurprisingly, crime, `CRIM`,  is one of the biggest factors in the price of a home, followed by the number of rooms (`RM`), and age. The Charles River dummy variable likely only explained a very tiny proportion of the samples. The proportion of residential zoning `ZN` and radius to major transportation `RAD` were fairly unimportant. I was fairly surprised that `PTRATIO` (teacher to student ratio) wasn't a bigger factor. Education seems to be a huge factor in the NYC region, but perhaps `PTRATIO` is not a great proxy or preference have changed over time.
 
 ### Applicability
 
@@ -620,4 +620,4 @@ Overall, I would not suggest using a model fit on data from 1978 to predict pric
 
 Further, the Boston market is very different from the Lincoln, NE market for example. People in these two markets have different careers, lifestyles, values, and preferences, and this is the case for most cities. Each is potentially unique.
 
-Today, we have much more data available related to the types of surrounding businesses, transportation, employment centers as well as peoples reactions and reviews to those places. I think the factors used serve as a good starting point for residential prices, but I think a more modern model would likely do much better. I'd love to know Zillow's standard error on selling prices.
+Today, we have much more data available related to the types of surrounding businesses, transportation, employment centers as well as peoples reactions and reviews to those places. I think the factors used serve as a good starting point for residential prices, but I think a more modern model would likely do much better.
